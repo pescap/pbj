@@ -1,6 +1,8 @@
 import numpy as np
 import bempp.api
-from .slic import calculate_potential_slic ############ maybe move to .common?????? CHECK
+from .slic import (
+    calculate_potential_slic,
+)  ############ maybe move to .common?????? CHECK
 import pbj
 
 
@@ -92,7 +94,6 @@ def calculate_potential(self, rerun_all, rerun_rhs):
     self.initialise_rhs()
 
     while it < max_iterations and phi_L2error > tolerance:
-
         if it == 0:
             self.e_hat_diel = self.ep_in / self.ep_stern
             self.e_hat_stern = self.ep_stern / self.ep_ex

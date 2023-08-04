@@ -28,16 +28,16 @@ class Solute:
         force_field="amber",
         formulation="direct",
         radius_keyword="solute",
-        solute_radius_type="PB"
+        solute_radius_type="PB",
     ):
-
         if not os.path.isfile(solute_file_path):
             print("file does not exist -> Cannot start")
             return
 
-            
         if force_field == "amoeba" and formulation != "direct":
-            print("AMOEBA force field is only available with the direct formulation -> Changing to direct")
+            print(
+                "AMOEBA force field is only available with the direct formulation -> Changing to direct"
+            )
         if force_field == "amoeba":
             formulation = "direct_amoeba"
 
@@ -111,55 +111,53 @@ class Solute:
 
             if force_field == "amoeba":
                 (
-                    self.x_q, 
-                    self.q, 
+                    self.x_q,
+                    self.q,
                     self.d,
-                    self.Q, 
-                    self.alpha, 
+                    self.Q,
+                    self.alpha,
                     self.r_q,
-                    self.mass, 
-                    self.polar_group, 
-                    self.thole, 
-                    self.connections_12, 
-                    self.connections_13, 
-                    self.pointer_connections_12, 
-                    self.pointer_connections_13, 
-                    self.p12scale, 
-                    self.p13scale, 
+                    self.mass,
+                    self.polar_group,
+                    self.thole,
+                    self.connections_12,
+                    self.connections_13,
+                    self.pointer_connections_12,
+                    self.pointer_connections_13,
+                    self.p12scale,
+                    self.p13scale,
                 ) = charge_tools.load_tinker_multipoles_to_solute(self)
 
                 self.d_induced = np.zeros_like(self.d)
                 self.d_induced_prev = np.zeros_like(self.d)
-            else: 
+            else:
                 self.q, self.x_q, self.r_q = charge_tools.load_charges_to_solute(
                     self
                 )  # Import charges from given file
 
         else:  # Generate mesh from given pdb or pqr, and import charges at the same time
-
             if force_field == "amoeba":
                 (
                     self.mesh,
-                    self.x_q, 
-                    self.q, 
-                    self.d, 
-                    self.Q, 
-                    self.alpha, 
+                    self.x_q,
+                    self.q,
+                    self.d,
+                    self.Q,
+                    self.alpha,
                     self.r_q,
-                    self.mass, 
-                    self.polar_group, 
-                    self.thole, 
-                    self.connections_12, 
-                    self.connections_13, 
-                    self.pointer_connections_12, 
-                    self.pointer_connections_13, 
-                    self.p12scale, 
-                    self.p13scale, 
+                    self.mass,
+                    self.polar_group,
+                    self.thole,
+                    self.connections_12,
+                    self.connections_13,
+                    self.pointer_connections_12,
+                    self.pointer_connections_13,
+                    self.p12scale,
+                    self.p13scale,
                 ) = charge_tools.generate_msms_mesh_import_tinker_multipoles(self)
 
                 self.d_induced = np.zeros_like(self.d)
                 self.d_induced_prev = np.zeros_like(self.d)
-
 
             else:
                 (
@@ -173,17 +171,19 @@ class Solute:
         self.ep_ex = 80.0
         self.ep_stern = 80.0
         self.kappa = 0.125
-        
+
         self.slic_alpha = 0.5
         self.slic_beta = -60
         self.slic_gamma = -0.5
-        
+
         self.slic_sigma = None
-        self.slic_e_hat_diel_old  = self.ep_in / self.ep_stern
+        self.slic_e_hat_diel_old = self.ep_in / self.ep_stern
         self.slic_e_hat_stern_old = self.ep_stern / self.ep_ex
-        
-        self.stern_mesh_density_ratio = 0.5 # stern_density/diel_density ratio. No need for fine meshes in Stern.
-        
+
+        self.stern_mesh_density_ratio = (
+            0.5  # stern_density/diel_density ratio. No need for fine meshes in Stern.
+        )
+
         self.pb_formulation_alpha = 1.0  # np.nan
         self.pb_formulation_beta = self.ep_ex / self.ep_in  # np.nan
 
@@ -222,7 +222,9 @@ class Solute:
     def pb_formulation(self, value):
         self._pb_formulation = value
         self.formulation_object = getattr(pb_formulations, self.pb_formulation, None)
-        if "preconditioning_matrix_gmres" not in self.matrices: # might already exist if just regenerating RHS
+        if (
+            "preconditioning_matrix_gmres" not in self.matrices
+        ):  # might already exist if just regenerating RHS
             self.matrices["preconditioning_matrix_gmres"] = None
         if self.formulation_object is None:
             raise ValueError("Unrecognised formulation type %s" % self.pb_formulation)
@@ -234,10 +236,9 @@ class Solute:
     @stern_mesh_density.setter
     def stern_mesh_density(self, value):
         self._stern_mesh_density = value
-        self.stern_mesh_density_ratio = value/self.mesh_density
+        self.stern_mesh_density_ratio = value / self.mesh_density
         pb_formulations.direct_stern.create_stern_mesh(self)
-        
-        
+
     def display_available_formulations(self):
         from inspect import getmembers, ismodule
 
@@ -271,7 +272,9 @@ class Solute:
             self.formulation_object.lhs(self)
         self.timings["time_matrix_initialisation"] = time.time() - start_time
 
-    def assemble_matrices(self): # not being used, as this is done in apply_preconditioning
+    def assemble_matrices(
+        self,
+    ):  # not being used, as this is done in apply_preconditioning
         start_assembly = time.time()
         self.matrices["A"].weak_form()
         self.timings["time_matrix_assembly"] = time.time() - start_assembly
@@ -309,11 +312,16 @@ class Solute:
             )
 
         self.timings["time_preconditioning"] = time.time() - preconditioning_start_time
-        
+
     def apply_preconditioning_rhs(self):
         preconditioning_start_time = time.time()
-        if self.pb_formulation_preconditioning and self.matrices["preconditioning_matrix_gmres"] is None:
-            precon_str = self.pb_formulation_preconditioning_type + "_preconditioner_rhs"
+        if (
+            self.pb_formulation_preconditioning
+            and self.matrices["preconditioning_matrix_gmres"] is None
+        ):
+            precon_str = (
+                self.pb_formulation_preconditioning_type + "_preconditioner_rhs"
+            )
             preconditioning_object = getattr(self.formulation_object, precon_str, None)
             if preconditioning_object is not None:
                 preconditioning_object(self)
@@ -331,14 +339,14 @@ class Solute:
             )
 
         self.timings["time_preconditioning"] = time.time() - preconditioning_start_time
-        
 
     def calculate_solvation_energy(self):
-
         if "phi" not in self.results:
-            print("Please compute surface potential first with simulation.calculate_potentials()")
+            print(
+                "Please compute surface potential first with simulation.calculate_potentials()"
+            )
             return
-        
+
         if self.force_field == "amoeba":
             self.formulation_object.calculate_solvation_energy_polarizable(self)
             return
@@ -367,19 +375,18 @@ class Solute:
                 self.timings["time_calc_energy"],
                 " seconds to compute the solvation energy",
             )
- 
-            
-    def calculate_gradient_field(self, h=0.001):
 
+    def calculate_gradient_field(self, h=0.001):
         """
         Compute the first derivate of potential due to solvent
         in the position of the points
         """
 
         if "phi" not in self.results:
-            print("Please compute surface potential first with simulation.calculate_potentials()")
+            print(
+                "Please compute surface potential first with simulation.calculate_potentials()"
+            )
             return
-
 
         start_time = time.time()
 
@@ -439,7 +446,6 @@ class Solute:
         return None
 
     def calculate_gradgradient_field(self, h=0.001):
-
         """
         Compute the second derivate of potential due to solvent
         in the position of the points
@@ -450,7 +456,9 @@ class Solute:
         """
 
         if "phi" not in self.results:
-            print("Please compute surface potential first with simulation.calculate_potentials()")
+            print(
+                "Please compute surface potential first with simulation.calculate_potentials()"
+            )
             return
 
         start_time = time.time()
@@ -461,27 +469,57 @@ class Solute:
         solution_neumann = self.results["d_phi"]
         solution_dirichl = self.results["phi"]
 
-        ddphi = np.zeros((len(x_q),3,3))
-        dist = np.array(([h,0,0],[0,h,0],[0,0,h]))
+        ddphi = np.zeros((len(x_q), 3, 3))
+        dist = np.array(([h, 0, 0], [0, h, 0], [0, 0, h]))
         for i in range(3):
             for j in np.where(np.array([0, 1, 2]) >= i)[0]:
-                if i==j:
+                if i == j:
                     dp = np.concatenate((x_q[:] + dist[i], x_q[:], x_q[:] - dist[i]))
-                    slpo = bempp.api.operators.potential.laplace.single_layer(neumann_space, dp.transpose())
-                    dlpo = bempp.api.operators.potential.laplace.double_layer(dirichl_space, dp.transpose())
-                    phi = slpo.evaluate(solution_neumann) - dlpo.evaluate(solution_dirichl)
-                    ddphi[:,i,j] = (phi[0,:len(x_q)] - 2*phi[0,len(x_q):2*len(x_q)] + phi[0, 2*len(x_q):])/(h**2)
+                    slpo = bempp.api.operators.potential.laplace.single_layer(
+                        neumann_space, dp.transpose()
+                    )
+                    dlpo = bempp.api.operators.potential.laplace.double_layer(
+                        dirichl_space, dp.transpose()
+                    )
+                    phi = slpo.evaluate(solution_neumann) - dlpo.evaluate(
+                        solution_dirichl
+                    )
+                    ddphi[:, i, j] = (
+                        phi[0, : len(x_q)]
+                        - 2 * phi[0, len(x_q) : 2 * len(x_q)]
+                        + phi[0, 2 * len(x_q) :]
+                    ) / (h**2)
 
                 else:
-                    dp = np.concatenate((x_q[:] + dist[i] + dist[j], x_q[:] - dist[i] - dist[j], x_q[:] + \
-                                         dist[i] - dist[j], x_q[:] - dist[i] + dist[j]))
-                    slpo = bempp.api.operators.potential.laplace.single_layer(neumann_space, dp.transpose())
-                    dlpo = bempp.api.operators.potential.laplace.double_layer(dirichl_space, dp.transpose())
-                    phi = slpo.evaluate(solution_neumann) - dlpo.evaluate(solution_dirichl)
-                    ddphi[:,i,j] = (phi[0,:len(x_q)] + phi[0,len(x_q):2*len(x_q)] - \
-                                    phi[0, 2*len(x_q):3*len(x_q)] - phi[0, 3*len(x_q):])/(4*h**2)
-                    ddphi[:,j,i] = (phi[0,:len(x_q)] + phi[0,len(x_q):2*len(x_q)] - \
-                                    phi[0, 2*len(x_q):3*len(x_q)] - phi[0, 3*len(x_q):])/(4*h**2)
+                    dp = np.concatenate(
+                        (
+                            x_q[:] + dist[i] + dist[j],
+                            x_q[:] - dist[i] - dist[j],
+                            x_q[:] + dist[i] - dist[j],
+                            x_q[:] - dist[i] + dist[j],
+                        )
+                    )
+                    slpo = bempp.api.operators.potential.laplace.single_layer(
+                        neumann_space, dp.transpose()
+                    )
+                    dlpo = bempp.api.operators.potential.laplace.double_layer(
+                        dirichl_space, dp.transpose()
+                    )
+                    phi = slpo.evaluate(solution_neumann) - dlpo.evaluate(
+                        solution_dirichl
+                    )
+                    ddphi[:, i, j] = (
+                        phi[0, : len(x_q)]
+                        + phi[0, len(x_q) : 2 * len(x_q)]
+                        - phi[0, 2 * len(x_q) : 3 * len(x_q)]
+                        - phi[0, 3 * len(x_q) :]
+                    ) / (4 * h**2)
+                    ddphi[:, j, i] = (
+                        phi[0, : len(x_q)]
+                        + phi[0, len(x_q) : 2 * len(x_q)]
+                        - phi[0, 2 * len(x_q) : 3 * len(x_q)]
+                        - phi[0, 3 * len(x_q) :]
+                    ) / (4 * h**2)
 
             self.results["gradgradphir_charges"] = ddphi
             self.timings["time_calc_gradgrad_field"] = time.time() - start_time
@@ -493,11 +531,11 @@ class Solute:
                     " seconds to compute the gradient of the gradient field on solute charges",
                 )
 
-
     def calculate_charges_forces(self, h=0.001):
-
         if "phi" not in self.results:
-            print("Please compute surface potential first with simulation.calculate_potentials()")
+            print(
+                "Please compute surface potential first with simulation.calculate_potentials()"
+            )
             return
 
         if "gradphir_charges" not in self.results:
@@ -527,9 +565,10 @@ class Solute:
         return None
 
     def calculate_boundary_forces(self, fdb_approx=False):
-
         if "phi" not in self.results:
-            print("Please compute surface potential first with simulation.calculate_potentials()")
+            print(
+                "Please compute surface potential first with simulation.calculate_potentials()"
+            )
             return
 
         start_time = time.time()
@@ -540,7 +579,7 @@ class Solute:
         convert_to_kcalmolA = 4 * np.pi * 332.0636817823836
         dS = np.transpose(np.transpose(self.mesh.normals) * self.mesh.volumes)
 
-        if fdb_approx :
+        if fdb_approx:
             # Dielectric boundary force
             f_db = (
                 -0.5
@@ -553,50 +592,53 @@ class Solute:
         else:
             N_elements = self.mesh.number_of_elements
             phi_vertex = self.results["phi"].coefficients
-            ep_hat =  self.ep_in/self.ep_ex
-            dphi_centers = ep_hat * self.results["d_phi"].evaluate_on_element_centers()[0]
+            ep_hat = self.ep_in / self.ep_ex
+            dphi_centers = (
+                ep_hat * self.results["d_phi"].evaluate_on_element_centers()[0]
+            )
             f_db = np.zeros(3)
             convert_to_kcalmolA = 4 * np.pi * 332.0636817823836
             for i in range(N_elements):
-                eps = self.mesh.normals[i]
-                    
                 # get vertex indices adyacent to a triangular element
-                v1_index = self.mesh.elements[0,i]
-                v2_index = self.mesh.elements[1,i]
-                v3_index = self.mesh.elements[2,i]
-                
+                v1_index = self.mesh.elements[0, i]
+                v2_index = self.mesh.elements[1, i]
+                v3_index = self.mesh.elements[2, i]
+
                 # get vertex coordinates from vertex indices
-                v1 = self.mesh.vertices[:,v1_index]
-                v2 = self.mesh.vertices[:,v2_index]
-                v3 = self.mesh.vertices[:,v3_index]
-                
+                v1 = self.mesh.vertices[:, v1_index]
+                v2 = self.mesh.vertices[:, v2_index]
+                v3 = self.mesh.vertices[:, v3_index]
+
                 v21 = v2 - v1
                 v31 = v3 - v1
-                
+
                 v21_norm = np.linalg.norm(v21)
                 v31_norm = np.linalg.norm(v31)
-                
+
                 phi_1 = phi_vertex[v1_index]
                 phi_2 = phi_vertex[v2_index]
                 phi_3 = phi_vertex[v3_index]
-                
-                alpha = np.arccos(np.dot(v21,v31)/(v21_norm*v31_norm))
-                
-                a = (phi_2 - phi_1)/v21_norm
-                b = (phi_3 - phi_1)/(v31_norm*np.sin(alpha)) - (phi_2-phi_1)/(v21_norm*np.tan(alpha))
-                
-                eta = v21/v21_norm
-                tau = np.cross(eps,eta)
-                
+
+                alpha = np.arccos(np.dot(v21, v31) / (v21_norm * v31_norm))
+
+                a = (phi_2 - phi_1) / v21_norm
+                b = (phi_3 - phi_1) / (v31_norm * np.sin(alpha)) - (phi_2 - phi_1) / (
+                    v21_norm * np.tan(alpha)
+                )
+
                 E_eps = -dphi_centers[i]
                 E_eta = -a
                 E_tau = -b
-                
 
-                F = ((1/ep_hat)*E_eps*E_eps + E_eta*E_eta + E_tau*E_tau)
-                F *= -0.5*(self.ep_ex - self.ep_in)*self.mesh.normals[i] * self.mesh.volumes[i]
-                
-                f_db += convert_to_kcalmolA * F    
+                F = (1 / ep_hat) * E_eps * E_eps + E_eta * E_eta + E_tau * E_tau
+                F *= (
+                    -0.5
+                    * (self.ep_ex - self.ep_in)
+                    * self.mesh.normals[i]
+                    * self.mesh.volumes[i]
+                )
+
+                f_db += convert_to_kcalmolA * F
 
         # Ionic boundary force
         f_ib = (
@@ -618,13 +660,16 @@ class Solute:
                 " seconds to compute the boundary forces",
             )
 
-    def calculate_solvation_forces(self, h=0.001, force_formulation='maxwell_tensor', fdb_approx=False):
-
+    def calculate_solvation_forces(
+        self, h=0.001, force_formulation="maxwell_tensor", fdb_approx=False
+    ):
         if "phi" not in self.results:
-            print("Please compute surface potential first with simulation.calculate_potentials()")
+            print(
+                "Please compute surface potential first with simulation.calculate_potentials()"
+            )
             return
 
-        if force_formulation == 'energy_functional':
+        if force_formulation == "energy_functional":
             if "f_qf" not in self.results:
                 self.calculate_gradient_field(h=h)
                 self.calculate_charges_forces()
@@ -653,87 +698,95 @@ class Solute:
                     self.timings["time_calc_solvation_force"],
                     " seconds to compute the solvation forces with ",
                     force_formulation,
-                    " formulation"
+                    " formulation",
                 )
 
-        elif force_formulation == 'maxwell_tensor':
-
+        elif force_formulation == "maxwell_tensor":
             if "f_ib" not in self.results:
                 self.calculate_boundary_forces()
 
             start_time = time.time()
 
-
             N_elements = self.mesh.number_of_elements
             P_normal = np.zeros([N_elements])
             phi_vertex = self.results["phi"].coefficients
-            ep_hat =  self.ep_in/self.ep_ex
-            dphi_centers = ep_hat * self.results["d_phi"].evaluate_on_element_centers()[0]
+            ep_hat = self.ep_in / self.ep_ex
+            dphi_centers = (
+                ep_hat * self.results["d_phi"].evaluate_on_element_centers()[0]
+            )
             total_force = np.zeros(3)
             convert_to_kcalmolA = 4 * np.pi * 332.0636817823836
 
             for i in range(N_elements):
                 eps = self.mesh.normals[i]
-                
+
                 # get vertex indices adyacent to a triangular element
-                v1_index = self.mesh.elements[0,i]
-                v2_index = self.mesh.elements[1,i]
-                v3_index = self.mesh.elements[2,i]
-                
+                v1_index = self.mesh.elements[0, i]
+                v2_index = self.mesh.elements[1, i]
+                v3_index = self.mesh.elements[2, i]
+
                 # get vertex coordinates from vertex indices
-                v1 = self.mesh.vertices[:,v1_index]
-                v2 = self.mesh.vertices[:,v2_index]
-                v3 = self.mesh.vertices[:,v3_index]
-                
+                v1 = self.mesh.vertices[:, v1_index]
+                v2 = self.mesh.vertices[:, v2_index]
+                v3 = self.mesh.vertices[:, v3_index]
+
                 v21 = v2 - v1
                 v31 = v3 - v1
-                
+
                 v21_norm = np.linalg.norm(v21)
                 v31_norm = np.linalg.norm(v31)
-                
+
                 phi_1 = phi_vertex[v1_index]
                 phi_2 = phi_vertex[v2_index]
                 phi_3 = phi_vertex[v3_index]
-                
-                alpha = np.arccos(np.dot(v21,v31)/(v21_norm*v31_norm))
-                
-                a = (phi_2 - phi_1)/v21_norm
-                b = (phi_3 - phi_1)/(v31_norm*np.sin(alpha)) - (phi_2-phi_1)/(v21_norm*np.tan(alpha))
-                
-                eta = v21/v21_norm
-                tau = np.cross(eps,eta)
-                
+
+                alpha = np.arccos(np.dot(v21, v31) / (v21_norm * v31_norm))
+
+                a = (phi_2 - phi_1) / v21_norm
+                b = (phi_3 - phi_1) / (v31_norm * np.sin(alpha)) - (phi_2 - phi_1) / (
+                    v21_norm * np.tan(alpha)
+                )
+
+                eta = v21 / v21_norm
+                tau = np.cross(eps, eta)
+
                 E_eps = -dphi_centers[i]
                 E_eta = -a
                 E_tau = -b
-                
-                E_norm = np.sqrt(E_eps*E_eps + E_eta*E_eta + E_tau*E_tau)
-                
-                F = (E_eps*E_eps - 0.5*E_norm*E_norm)*eps + E_eps*E_eta*eta + E_eps*E_tau*tau 
-                
+
+                E_norm = np.sqrt(E_eps * E_eps + E_eta * E_eta + E_tau * E_tau)
+
+                F = (
+                    (E_eps * E_eps - 0.5 * E_norm * E_norm) * eps
+                    + E_eps * E_eta * eta
+                    + E_eps * E_tau * tau
+                )
+
                 F *= self.ep_ex
-                total_force += F * self.mesh.volumes[i]   
-                P_normal[i] = np.sqrt(np.dot(F * self.mesh.volumes[i], F * self.mesh.volumes[i]))
-                
+                total_force += F * self.mesh.volumes[i]
+                P_normal[i] = np.sqrt(
+                    np.dot(F * self.mesh.volumes[i], F * self.mesh.volumes[i])
+                )
+
             self.results["P_normal"] = convert_to_kcalmolA * P_normal
-            self.results["f_solv"] = convert_to_kcalmolA * total_force + self.results["f_ib"]
-            self.timings["time_calc_solvation_force"] = (
-                time.time()
-                - start_time
+            self.results["f_solv"] = (
+                convert_to_kcalmolA * total_force + self.results["f_ib"]
             )
+            self.timings["time_calc_solvation_force"] = time.time() - start_time
             if self.print_times:
                 print(
                     "It took ",
                     self.timings["time_calc_solvation_force"],
                     " seconds to compute the solvation forces with ",
                     force_formulation,
-                    " formulation"
+                    " formulation",
                 )
 
         else:
-            raise ValueError('Formulation have to be "maxwell_tensor" or "energy_functional"')
+            raise ValueError(
+                'Formulation have to be "maxwell_tensor" or "energy_functional"'
+            )
 
-            
 
 def get_name_from_pdb(pdb_path):
     pdb_file = open(pdb_path)
