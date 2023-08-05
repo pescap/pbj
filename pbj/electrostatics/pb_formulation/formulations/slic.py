@@ -6,7 +6,6 @@ from .common import calculate_potential_stern
 import pbj
 import time
 import pbj.electrostatics.utils as utils
-from pbj.electrostatics.utils import matrix_to_discrete_form
 import scipy.sparse.linalg
 
 
@@ -422,9 +421,6 @@ def calculate_potential_slic(simulation):
 
 
 def update_and_assemble_linear_system_slic(simulation, matrix_cache):
-    from scipy.sparse import bmat, dok_matrix
-    from scipy.sparse.linalg import aslinearoperator
-
     solute_count = len(simulation.solutes)
 
     A = np.empty((solute_count, solute_count), dtype="O")

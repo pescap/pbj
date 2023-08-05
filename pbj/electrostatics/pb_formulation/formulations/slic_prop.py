@@ -2,7 +2,7 @@ import numpy as np
 import bempp.api
 from .slic import (
     calculate_potential_slic,
-)  ############ maybe move to .common?????? CHECK
+)  # maybe move to .common?????? CHECK
 import pbj
 
 
